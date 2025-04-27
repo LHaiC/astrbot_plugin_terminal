@@ -7,7 +7,7 @@ import re
 from datetime import datetime, timedelta
 import os
 
-@register("terminal", "LHaiC", "通过和AstrBot对话调用服务器终端", "v1.0.1")
+@register("terminal", "LHaiC", "通过和AstrBot对话调用服务器终端", "v1.0.2")
 class TerminalPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -101,19 +101,21 @@ class TerminalPlugin(Star):
 
             output_file = os.path.join(tmp_dir, f"astrbot_term_out_{temp_id}")
             exit_code_file = os.path.join(tmp_dir, f"astrbot_term_exit_{temp_id}")
+            pwd_file = os.path.join(tmp_dir, f"astrbot_term_pwd_{temp_id}")
             
-            # 2. 清屏并执行命令，将输出重定向到临时文件
+            # 2. 清屏并执行命令，将输出重定向到临时文件，同时获取当前目录
             subprocess.run([
                 "tmux", "send-keys", "-t", session_name,
-                f"clear && {{ {command}; }} > {output_file} 2>&1; echo $? > {exit_code_file}", "Enter"
+                f"clear && {{ {command}; }} > {output_file} 2>&1; echo $? > {exit_code_file}; pwd > {pwd_file}", "Enter"
             ], check=True)
             
             # 3. 等待命令执行完成
             await asyncio.sleep(1.5)  # 给命令足够的执行时间
             
-            # 4. 读取命令输出和退出状态
+            # 4. 读取命令输出、退出状态和当前目录
             output = ""
             exit_code = -1
+            current_dir = ""
             
             try:
                 # 读取输出
@@ -127,9 +129,14 @@ class TerminalPlugin(Star):
                         exit_code_str = f.read().strip()
                         if exit_code_str.isdigit():
                             exit_code = int(exit_code_str)
+                
+                # 读取当前目录
+                if os.path.exists(pwd_file):
+                    with open(pwd_file, "r") as f:
+                        current_dir = f.read().strip()
                             
                 # 清理临时文件
-                for file in [output_file, exit_code_file]:
+                for file in [output_file, exit_code_file, pwd_file]:
                     if os.path.exists(file):
                         os.remove(file)
                         
@@ -146,6 +153,10 @@ class TerminalPlugin(Star):
             # 添加退出码信息（如果不为0）
             if exit_code != 0 and exit_code != -1:
                 result_text += f"\n⚠️ 命令退出码: {exit_code}"
+            
+            # 添加当前目录信息
+            if current_dir:
+                result_text += f"\n📂 当前目录: {current_dir}"
                 
             yield event.plain_result(result_text)
             
@@ -178,7 +189,15 @@ class TerminalPlugin(Star):
                 logger.info(f"清理超时会话: {user_id} - {session}")
 
     async def terminate(self):
-        """插件卸载时清理所有会话"""
+        """插件卸载时清理所有会话和临时文件"""
         for user_id in list(self.active_sessions.keys()):
             session = self.active_sessions.pop(user_id)["session"]
             subprocess.run(["tmux", "kill-session", "-t", session], stderr=subprocess.DEVNULL)
+
+        tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
+        if os.path.exists(tmp_dir) and os.path.isdir(tmp_dir):
+            for filename in os.listdir(tmp_dir):
+                file_path = os.path.join(tmp_dir, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            logger.info("已清空临时文件夹")
