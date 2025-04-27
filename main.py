@@ -7,7 +7,7 @@ import re
 from datetime import datetime, timedelta
 import os
 
-@register("terminal", "LHaiC", "通过和AstrBot对话调用服务器终端", "v1.0.0")
+@register("terminal", "LHaiC", "通过和AstrBot对话调用服务器终端", "v1.0.1")
 class TerminalPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
@@ -20,7 +20,8 @@ class TerminalPlugin(Star):
     def terminal_group(self):
         """终端操作指令组"""
         pass
-
+    
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @terminal_group.command("on")
     async def start_terminal(self, event: AstrMessageEvent):
         """启动终端会话"""
@@ -54,6 +55,7 @@ class TerminalPlugin(Star):
             logger.error(f"启动tmux失败: {str(e)}")
             yield event.plain_result("❌ 终端会话启动失败")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @terminal_group.command("off") 
     async def stop_terminal(self, event: AstrMessageEvent):
         """关闭终端会话"""
@@ -71,6 +73,7 @@ class TerminalPlugin(Star):
             logger.error(f"关闭tmux失败: {str(e)}")
             yield event.plain_result("❌ 终端会话关闭失败")
 
+    @filter.permission_type(filter.PermissionType.ADMIN)
     @filter.regex(r"^(?!terminal\s+(on|off)).+")
     async def execute_command(self, event: AstrMessageEvent):
         """执行终端命令（文件重定向版）"""

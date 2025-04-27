@@ -1,5 +1,5 @@
 name: terminal
 desc: 通过和AstrBot对话调用服务器终端
-version: v1.0.0
+version: v1.0.1
 author: LHaiC
 repo: https://github.com/LHaiC/astrbot_plugin_terminal
