@@ -110,7 +110,7 @@ class TerminalPlugin(Star):
             ], check=True)
             
             # 3. 等待命令执行完成
-            await asyncio.sleep(1.5)  # 给命令足够的执行时间
+            await asyncio.sleep(2.5)  # 给命令足够的执行时间
             
             # 4. 读取命令输出、退出状态和当前目录
             output = ""
